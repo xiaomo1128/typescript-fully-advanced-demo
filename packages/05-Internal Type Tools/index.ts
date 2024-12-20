@@ -2,7 +2,7 @@
  * @Author: xianglei
  * @Date: 2024-12-18 15:37:39
  * @LastEditors: xianglei
- * @LastEditTime: 2024-12-19 16:10:23
+ * @LastEditTime: 2024-12-20 11:30:49
  * @FilePath: \packages\05-Internal Type Tools\index.ts
  * @Description:
  */
@@ -188,3 +188,214 @@ const StringifiedFoo3 = {};
 type Clone<T> = {
   [K in keyof T]: T[K];
 };
+
+/** typeof 类型查询 */
+const nullVar = null;
+const undefinedVar = undefined;
+
+const func = (input: string) => {
+  return input.length > 10;
+};
+
+type Str = typeof str; // "linbudu"
+type Obj = typeof obj; // { foo: IFoo; }
+type Null = typeof nullVar; // null
+type Undefined = typeof undefined; // undefined
+type Func = typeof func; // (input: string) => boolean
+
+const func2: typeof func = (name: string) => {
+  return name === "linbudu";
+};
+/** 返回一个函数类型中返回值位置的类型 */
+type FuncReturnType = ReturnType<typeof func>; // boolean
+
+function fooFn(input: string | number) {
+  if (typeof input === "string") {
+  }
+  if (typeof input === "number") {
+  }
+}
+
+function isString(input: unknown): boolean {
+  return typeof input === "string";
+}
+function fooFn2(input: string | number) {
+  if (isString(input)) {
+    // input.replace("a", "b"); // 类型“string”上不存在属性“replace”。
+  }
+  if (typeof input === "number") {
+  }
+}
+
+/**  is 关键字来显式地提供类型信息 */
+function isString1(input: unknown): input is string {
+  return typeof input === "string";
+}
+
+function fooFn3(input: string | number) {
+  if (isString(input)) {
+    // 正确了
+    // input.replace("linbudu", "linbudu599");
+  }
+  if (typeof input === "number") {
+  }
+  // ...
+}
+
+/** 类型守卫类似类型断言，但类型守卫更宽松 */
+export type Falsy = false | 0 | "" | null | undefined;
+export const isFalsy = (val: unknown): val is Falsy => !val;
+
+/** 不包括不常用的 symbol 和 bigint */
+export type Primitive = string | number | boolean | undefined;
+export const isPrimitive = (val: unknown): val is Primitive =>
+  ["string", "number", "boolean", "undefined"].includes(typeof val);
+
+interface Foo5 {
+  foo: string;
+  fooOnly: boolean;
+  shared: number;
+}
+interface Bar5 {
+  bar: string;
+  barOnly: boolean;
+  shared: number;
+}
+
+function handle1(input: Foo5 | Bar5) {
+  if ("foo" in input) {
+    input.fooOnly;
+  } else {
+    input.barOnly;
+  }
+}
+function handle2(input: Foo5 | Bar5) {
+  if ("shared" in input) {
+    // 类型“Foo5 | Bar5”上不存在属性“fooOnly”。
+    // 类型“Bar5”上不存在属性“fooOnly”。
+    // input.fooOnly;
+  } else {
+    // 类型“never”上不存在属性“barOnly”
+    // input.barOnly;
+  }
+}
+
+function ensureArray2(input: number | number[]): number[] {
+  if (Array.isArray(input)) {
+    return input;
+  } else {
+    return [input];
+  }
+}
+
+interface Foo6 {
+  kind: "foo";
+  diffType: string;
+  fooOnly: boolean;
+  shared: number;
+}
+interface Bar6 {
+  kind: "bar";
+  diffType: number;
+  barOnly: boolean;
+  shared: number;
+}
+function handle3(input: Foo6 | Bar6) {
+  if (input.kind === "foo") {
+    input.fooOnly;
+  } else {
+    input.barOnly;
+  }
+}
+function handle4(input: Foo6 | Bar6) {
+  // 报错，并没有起到区分的作用，在两个代码块中都是 Foo | Bar
+  if (typeof input.diffType === "string") {
+    // input.fooOnly;
+  } else {
+    // input.barOnly;
+  }
+}
+
+class FooBase {}
+class BarBase {}
+class Foo extends FooBase {
+  fooOnly() {}
+}
+class Bar extends BarBase {
+  barOnly() {}
+}
+function handle5(input: Foo | Bar) {
+  if (input instanceof FooBase) {
+    input.fooOnly();
+  } else {
+    input.barOnly();
+  }
+}
+
+/**
+ import assert from "assert";
+ let name = "baidu";
+ assert(typeof name === "number");
+ // number类型
+ name.toFixed();
+ */
+
+function assert(condition: any, msg?: string): asserts condition {
+  if (!condition) {
+    throw new Error(msg || "assert error");
+  }
+}
+
+function assertIsNumber(val: any): asserts val is number {
+  if (typeof val !== "number") {
+    throw new Error("Not a number");
+  }
+}
+assertIsNumber(name);
+// name.toFixed();
+
+/** 接口合并 */
+interface Struct3 {
+  primitiveProp: string;
+  objectProp: {
+    name: string;
+  };
+  unionProp: string | number;
+}
+// 错误扩展
+// interface Struct4 extends Struct3 {
+//     primitiveProp: number;
+//     objectProp: {
+//         age: number;
+//     };
+//     unionProp: boolean;
+// }
+
+type Base = {
+  name: string;
+};
+interface IDerived extends Base {
+  // 报错！就像继承接口一样需要类型兼容
+  name: number;
+  age: number;
+}
+
+interface IBase {
+  name: string;
+}
+type Derived = IBase & {
+  name: number;
+};
+
+type Args = ["a", number] | ["b", string];
+type Func1 = (...args: ["a", number] | ["b", string]) => void;
+const f1: Func1 = (kind, payload) => {
+  if (kind === "a") {
+    payload.toFixed();
+  }
+  if (kind === "b") {
+    payload.toUpperCase();
+  }
+};
+
+// [TypeScript 中的类型控制流分析演进](https://zhuanlan.zhihu.com/p/461842201)
